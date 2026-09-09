@@ -42,6 +42,56 @@ export async function validateApiKey(apiKey: string): Promise<{ valid: boolean; 
 }
 
 /**
+ * Dynamically fetch available Gemini models supporting generateContent for the user's API key
+ */
+export async function getAvailableGeminiModels(apiKey: string): Promise<string[]> {
+  const fallbackModels = [
+    'gemini-3.6-flash',
+    'gemini-2.5-flash',
+    'gemini-3.1-pro-preview',
+  ];
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (Array.isArray(data.models)) {
+        const deprecatedKeywords = ['1.5', '1.0', '2.0', '2.5-pro', 'latest'];
+        const activeModels = data.models
+          .filter(
+            (m: any) =>
+              Array.isArray(m.supportedGenerationMethods) &&
+              m.supportedGenerationMethods.includes('generateContent')
+          )
+          .map((m: any) => m.name.replace(/^models\//, ''))
+          .filter(
+            (name: string) => !deprecatedKeywords.some((dep) => name.toLowerCase().includes(dep))
+          );
+
+        if (activeModels.length > 0) {
+          // Sort to prioritize gemini-3.6-flash, gemini-2.5-flash, gemini-3.1-pro-preview
+          const flash36 = activeModels.filter((m: string) => m.includes('3.6-flash'));
+          const flash25 = activeModels.filter((m: string) => m.includes('2.5-flash'));
+          const pro31 = activeModels.filter((m: string) => m.includes('3.1-pro'));
+          const otherFlash = activeModels.filter(
+            (m: string) => m.includes('flash') && !m.includes('3.6') && !m.includes('2.5')
+          );
+          const others = activeModels.filter(
+            (m: string) =>
+              !m.includes('flash') && !m.includes('3.1-pro')
+          );
+          return [...flash36, ...flash25, ...pro31, ...otherFlash, ...others];
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch dynamic model list, using fallback list', e);
+  }
+
+  return fallbackModels;
+}
+
+/**
  * Generate Master Prompt from a basic idea using Google AI Studio Gemini API
  */
 export async function generateMasterPromptFromIdea(
@@ -201,58 +251,82 @@ JSON Schema structure:
 
   const prompt = `PRODUCT IDEA: "${idea}"\n\nGenerate an in-depth, thorough, highly professional Master Prompt JSON structure for this product idea following the schema provided.`;
 
-  // We try official Google AI Studio Gemini models in order of performance and availability
-  const models = [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
-    'gemini-2.5-pro',
-    'gemini-1.5-pro-latest',
-  ];
+  // Dynamically fetch available models for the user's API key
+  const models = await getAvailableGeminiModels(apiKey);
   let lastErrorMsg = '';
 
   for (const model of models) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemInstruction}\n\n${prompt}` }] }],
-          generationConfig: {
-            temperature: 0.7,
-            responseMimeType: 'application/json',
-          },
-        }),
-      });
+    let attempts = 0;
+    const maxAttempts = 2;
 
-      if (!response.ok) {
-        const errorJson = await response.json().catch(() => null);
-        const errMsg = errorJson?.error?.message || `HTTP ${response.status}`;
-        console.warn(`Gemini model ${model} failed (${response.status}):`, errMsg);
-        lastErrorMsg = errMsg;
-        continue;
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        let response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemInstruction}\n\n${prompt}` }] }],
+            generationConfig: {
+              temperature: 0.7,
+              responseMimeType: 'application/json',
+            },
+          }),
+        });
+
+        if (!response.ok && response.status !== 503 && response.status !== 429 && response.status !== 404) {
+          // Retry without responseMimeType if model doesn't support json mode
+          response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: `${systemInstruction}\n\n${prompt}` }] }],
+              generationConfig: {
+                temperature: 0.7,
+              },
+            }),
+          });
+        }
+
+        if (!response.ok) {
+          const errorJson = await response.json().catch(() => null);
+          const errMsg = errorJson?.error?.message || `HTTP ${response.status}`;
+          lastErrorMsg = errMsg;
+
+          // If temporary high demand (503) or rate limited (429), retry after a short pause
+          if ((response.status === 503 || response.status === 429) && attempts < maxAttempts) {
+            console.warn(`Gemini model ${model} returned ${response.status}. Retrying in 1.5s (attempt ${attempts}/${maxAttempts})...`);
+            await new Promise((res) => setTimeout(res, 1500));
+            continue;
+          }
+
+          console.warn(`Gemini model ${model} failed (${response.status}):`, errMsg);
+          break; // move to next model
+        }
+
+        const json = await response.json();
+        const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) {
+          break;
+        }
+
+        // Clean JSON text if wrapped in markdown block
+        const cleanJsonStr = rawText
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim();
+
+        const parsedData: MasterPromptData = JSON.parse(cleanJsonStr);
+        return parsedData;
+      } catch (err: any) {
+        console.warn(`Failed with model ${model}:`, err);
+        lastErrorMsg = err.message || 'Network error';
+        if (attempts < maxAttempts) {
+          await new Promise((res) => setTimeout(res, 1000));
+        }
       }
-
-      const json = await response.json();
-      const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) {
-        continue;
-      }
-
-      // Clean JSON text if wrapped in markdown block
-      const cleanJsonStr = rawText
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .trim();
-
-      const parsedData: MasterPromptData = JSON.parse(cleanJsonStr);
-      return parsedData;
-    } catch (err: any) {
-      console.warn(`Failed with model ${model}:`, err);
-      lastErrorMsg = err.message || 'Network error';
     }
   }
 
