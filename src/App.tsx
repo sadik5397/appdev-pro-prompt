@@ -92,13 +92,13 @@ export function App() {
       <UiScreenGeneratorModal
         isOpen={isUiModalOpen}
         onClose={() => setIsUiModalOpen(false)}
-        appName={promptData.overview.appName}
+        promptData={promptData}
         onOpenKeySettings={() => setIsKeySettingsModalOpen(true)}
       />
       <LogoGeneratorModal
         isOpen={isLogoModalOpen}
         onClose={() => setIsLogoModalOpen(false)}
-        appName={promptData.overview.appName}
+        promptData={promptData}
         onOpenKeySettings={() => setIsKeySettingsModalOpen(true)}
       />
     </div>

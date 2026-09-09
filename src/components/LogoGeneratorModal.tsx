@@ -1,34 +1,36 @@
 import React, { useState } from 'react';
-import { X, Download, Loader2, AlertCircle } from 'lucide-react';
+import { X, Download, Loader2, AlertCircle, FileText } from 'lucide-react';
 import { getSavedApiKey, generateImageAI } from '../services/aiService';
+import type { MasterPromptData } from '../types/prompt';
 
 interface LogoGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  appName: string;
+  promptData: MasterPromptData;
   onOpenKeySettings: () => void;
 }
 
 export const LogoGeneratorModal: React.FC<LogoGeneratorModalProps> = ({
   isOpen,
   onClose,
-  appName,
+  promptData,
   onOpenKeySettings,
 }) => {
   const [appendPrompt, setAppendPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLogo, setGeneratedLogo] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-
   const [isDownloading, setIsDownloading] = useState(false);
 
   if (!isOpen) return null;
 
   const apiKey = getSavedApiKey();
+  const appName = promptData.overview.appName || 'My App';
+  const desc = promptData.overview.oneSentenceDef || promptData.overview.productGoal || 'Modern software application';
+  const style = promptData.designSystem.visualDirection || 'minimalist vector mark';
+  const primaryColor = promptData.designSystem.primary || 'vibrant blue accent';
 
-  const defaultPromptText = `Modern minimalist vector app logo mark for ${
-    appName || 'My App'
-  }, centered geometric emblem logo symbol, vibrant blue accent color, solid dark background, flat vector graphic icon design, ultra sharp high contrast, studio quality artwork.`;
+  const defaultPromptText = `Modern minimalist vector app logo mark for ${appName} (${desc}). Visual aesthetic: ${style}, featuring ${primaryColor}. Centered geometric emblem logo symbol, solid dark background, flat vector graphic icon design, ultra sharp high contrast, studio quality artwork.`;
 
   const handleGenerate = async () => {
     if (!apiKey) {
@@ -42,7 +44,6 @@ export const LogoGeneratorModal: React.FC<LogoGeneratorModalProps> = ({
 
     try {
       const fullPrompt = `${defaultPromptText} ${appendPrompt.trim()}`.trim();
-
       const img = await generateImageAI(fullPrompt, apiKey, 1024, 1024);
       setGeneratedLogo(img);
     } catch (err: any) {
@@ -90,7 +91,7 @@ export const LogoGeneratorModal: React.FC<LogoGeneratorModalProps> = ({
         <div className="mb-4">
           <h3 className="text-base font-bold text-white">Generate 1:1 App Logo</h3>
           <p className="text-xs text-slate-400">
-            Borderless, 1:1 square ratio clean app logo mark with solid background
+            Clean 1:1 vector emblem designed from your Master Engineering Prompt brief
           </p>
         </div>
 
@@ -110,10 +111,44 @@ export const LogoGeneratorModal: React.FC<LogoGeneratorModalProps> = ({
           </div>
         )}
 
+        {/* Project Instruction Brief Overview Card */}
+        <div className="p-3 bg-[#0B0F17] border border-[#1E2638] rounded-lg mb-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#0866FF] uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" /> Project Brief Overview
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {promptData.overview.productType || 'App'} • {promptData.overview.platform || 'Web/Mobile'}
+            </span>
+          </div>
+          <h4 className="text-xs font-bold text-white">
+            {appName}
+          </h4>
+          {desc && (
+            <p className="text-xs text-slate-300 leading-relaxed italic">
+              "{desc}"
+            </p>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1.5 text-[11px] border-t border-[#1E2638]/60 text-slate-400">
+            {promptData.designSystem.visualDirection && (
+              <div>
+                <span className="text-slate-500 font-medium">Style: </span>
+                <span className="text-slate-200">{promptData.designSystem.visualDirection}</span>
+              </div>
+            )}
+            {promptData.overview.targetUsers && (
+              <div>
+                <span className="text-slate-500 font-medium">Target: </span>
+                <span className="text-slate-200">{promptData.overview.targetUsers}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Prompts Section */}
         <div className="space-y-3 mb-4">
           <div className="text-xs text-slate-400 bg-[#0B0F17]/60 p-3 rounded border border-[#1E2638]/60 leading-relaxed">
-            <span className="font-semibold text-slate-300">Base Prompt: </span>
+            <span className="font-semibold text-slate-300">Constructed Base Prompt: </span>
             <span>{defaultPromptText}</span>
           </div>
 
@@ -123,7 +158,7 @@ export const LogoGeneratorModal: React.FC<LogoGeneratorModalProps> = ({
             </label>
             <input
               type="text"
-              placeholder="e.g., Clean geometric mark, blue accent hue, minimalist 3D feel..."
+              placeholder="e.g., Geometric mark, blue accent hue, minimalist 3D feel..."
               value={appendPrompt}
               onChange={(e) => setAppendPrompt(e.target.value)}
               className="w-full dark-input text-xs p-2.5"
@@ -134,7 +169,7 @@ export const LogoGeneratorModal: React.FC<LogoGeneratorModalProps> = ({
         {errorMessage && (
           <div className="mb-4 flex items-center justify-between p-2.5 bg-red-950/40 border border-red-500/20 rounded text-xs text-red-300">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400" />
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
               <span>{errorMessage}</span>
             </div>
             {!apiKey && (

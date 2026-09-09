@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { X, Download, Loader2, AlertCircle } from 'lucide-react';
+import { X, Download, Loader2, AlertCircle, FileText } from 'lucide-react';
 import { getSavedApiKey, generateImageAI } from '../services/aiService';
+import type { MasterPromptData } from '../types/prompt';
 
 interface UiScreenGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  appName: string;
+  promptData: MasterPromptData;
   onOpenKeySettings: () => void;
 }
 
 export const UiScreenGeneratorModal: React.FC<UiScreenGeneratorModalProps> = ({
   isOpen,
   onClose,
-  appName,
+  promptData,
   onOpenKeySettings,
 }) => {
   const [appendPrompt, setAppendPrompt] = useState('');
@@ -23,10 +24,12 @@ export const UiScreenGeneratorModal: React.FC<UiScreenGeneratorModalProps> = ({
   if (!isOpen) return null;
 
   const apiKey = getSavedApiKey();
+  const appName = promptData.overview.appName || 'My App';
+  const desc = promptData.overview.oneSentenceDef || promptData.overview.productGoal || 'Modern software dashboard';
+  const style = promptData.designSystem.visualDirection || 'modern glassmorphism UI';
+  const tech = promptData.overview.primaryTech || 'React / Web';
 
-  const defaultPromptText = `High resolution 4K full-HD mobile and desktop UI screens mockup for ${
-    appName || 'My App'
-  }, showing key screens including main dashboard, primary user workflow, and interactive settings panel. Modern glassmorphism, glowing cyan accents, polished typography, clean layout, vibrant UI components, dark mode aesthetic, professional app showcase format.`;
+  const defaultPromptText = `High resolution 4K full-HD mobile and desktop UI screens mockup for ${appName} (${desc}). Primary stack: ${tech}. Visual direction: ${style}. Showing key screens including main dashboard, primary user workflow, and interactive settings panel. Glowing cyan/blue accents, polished typography, clean layout, vibrant UI components, dark mode aesthetic, professional app showcase format.`;
 
   const handleGenerate = async () => {
     if (!apiKey) {
@@ -43,7 +46,7 @@ export const UiScreenGeneratorModal: React.FC<UiScreenGeneratorModalProps> = ({
 
       const [img1, img2] = await Promise.all([
         generateImageAI(fullPrompt, apiKey, 1920, 1080),
-        generateImageAI(`${fullPrompt} Alternate view with dark dashboard detail`, apiKey, 1920, 1080),
+        generateImageAI(`${fullPrompt} Alternate view focusing on dark analytics dashboard detail`, apiKey, 1920, 1080),
       ]);
 
       setGeneratedImages([img1, img2]);
@@ -88,7 +91,7 @@ export const UiScreenGeneratorModal: React.FC<UiScreenGeneratorModalProps> = ({
         <div className="mb-4">
           <h3 className="text-base font-bold text-white">Generate Full HD UI Screens</h3>
           <p className="text-xs text-slate-400">
-            Create 2 high-resolution UI screen mockups tailored for {appName || 'your application'}
+            Create 2 high-resolution UI screen mockups tailored to your Master Engineering Prompt specs
           </p>
         </div>
 
@@ -108,10 +111,44 @@ export const UiScreenGeneratorModal: React.FC<UiScreenGeneratorModalProps> = ({
           </div>
         )}
 
+        {/* Project Instruction Brief Overview Card */}
+        <div className="p-3 bg-[#0B0F17] border border-[#1E2638] rounded-lg mb-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#0866FF] uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" /> Project Brief Overview
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {promptData.overview.productType || 'App'} • {tech}
+            </span>
+          </div>
+          <h4 className="text-xs font-bold text-white">
+            {appName}
+          </h4>
+          {desc && (
+            <p className="text-xs text-slate-300 leading-relaxed italic">
+              "{desc}"
+            </p>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1.5 text-[11px] border-t border-[#1E2638]/60 text-slate-400">
+            {promptData.designSystem.visualDirection && (
+              <div>
+                <span className="text-slate-500 font-medium">Style: </span>
+                <span className="text-slate-200">{promptData.designSystem.visualDirection}</span>
+              </div>
+            )}
+            {promptData.overview.targetUsers && (
+              <div>
+                <span className="text-slate-500 font-medium">Target: </span>
+                <span className="text-slate-200">{promptData.overview.targetUsers}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Prompts Section */}
         <div className="space-y-3 mb-4">
           <div className="text-xs text-slate-400 bg-[#0B0F17]/60 p-3 rounded border border-[#1E2638]/60 leading-relaxed">
-            <span className="font-semibold text-slate-300">Base Prompt: </span>
+            <span className="font-semibold text-slate-300">Constructed Base Prompt: </span>
             <span>{defaultPromptText}</span>
           </div>
 
