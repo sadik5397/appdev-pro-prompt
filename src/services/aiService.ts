@@ -336,7 +336,7 @@ JSON Schema structure:
 }
 
 /**
- * Generate UI Images using AI (Google AI Studio Imagen or Pollinations AI Flux model fallback)
+ * Generate UI Images using AI (Google AI Studio Imagen 3 / Nano-Banana with user API Key, or Pollinations fallback)
  */
 export async function generateImageAI(
   prompt: string,
@@ -344,38 +344,45 @@ export async function generateImageAI(
   width: number = 1920,
   height: number = 1080
 ): Promise<string> {
-  const seed = Math.floor(Math.random() * 1000000);
-  const encodedPrompt = encodeURIComponent(prompt);
+  const targetRatio = width === height ? '1:1' : '16:9';
 
-  // If user provided a Google AI Studio API key, try official Google AI Studio Imagen 3 endpoint first
+  // 1. Try Google AI Studio Imagen 3 / Nano-Banana official generateImages API endpoint using user's API key
   if (apiKey) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          config: {
-            numberOfImages: 1,
-            aspectRatio: width === height ? '1:1' : '16:9',
-            outputMimeType: 'image/png',
-          },
-        }),
-      });
+    const imagenEndpoints = [
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-fast-generate-001:generateImages?key=${apiKey}`,
+    ];
 
-      if (response.ok) {
-        const json = await response.json();
-        const b64 = json?.generatedImages?.[0]?.image?.imageBytes;
-        if (b64) {
-          return `data:image/png;base64,${b64}`;
+    for (const url of imagenEndpoints) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            config: {
+              numberOfImages: 1,
+              aspectRatio: targetRatio,
+              outputMimeType: 'image/png',
+            },
+          }),
+        });
+
+        if (response.ok) {
+          const json = await response.json();
+          const b64 = json?.generatedImages?.[0]?.image?.imageBytes;
+          if (b64) {
+            return `data:image/png;base64,${b64}`;
+          }
         }
+      } catch (e) {
+        // Fallback silently if Google API blocks CORS from direct browser fetch
       }
-    } catch (e) {
-      // Clean fallback without throwing network errors
     }
   }
 
-  // Primary AI Image Generation Engine: Nano-Banana (Latest) AI Image Model
+  // 2. High-performance Nano-Banana (Latest) AI Image Engine fallback
+  const seed = Math.floor(Math.random() * 1000000);
+  const encodedPrompt = encodeURIComponent(prompt);
   return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=nano-banana-latest&nologo=true`;
 }
