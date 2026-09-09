@@ -15,9 +15,7 @@ export function generateMasterPromptMarkdown(data: MasterPromptData): string {
   const ac = data.acceptanceCriteria;
   const rp = data.requirementPriority;
 
-  return `# Master Prompt Template for Antigravity
-
-# BUILD ${o.appName || '[PROJECT / APP NAME]'}
+  return `# BUILD ${o.appName || '[PROJECT / APP NAME]'}
 
 You are acting as a **Principal Product Manager, Staff Software Engineer, Technical Architect, UI/UX Designer, QA Engineer, and Product Engineer**.
 
