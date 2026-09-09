@@ -376,6 +376,6 @@ export async function generateImageAI(
     }
   }
 
-  // Primary high-performance AI Image Engine (Black Forest Labs Flux 1.1 / Schnell model via Pollinations API)
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=flux&nologo=true`;
+  // Primary AI Image Generation Engine: Nano-Banana (Latest) AI Image Model
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=nano-banana-latest&nologo=true`;
 }
