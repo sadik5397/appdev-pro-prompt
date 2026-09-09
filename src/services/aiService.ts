@@ -344,11 +344,11 @@ export async function generateImageAI(
   width: number = 1920,
   height: number = 1080
 ): Promise<string> {
-  const targetRatio = width === height ? '1:1' : '16:9';
+  const seed = Math.floor(Math.random() * 1000000);
+  const encodedPrompt = encodeURIComponent(prompt);
 
-  // If user provided a Google AI Studio API key, execute Imagen 3 via Google AI Studio API
+  // If user provided a Google AI Studio API key, try official Google AI Studio Imagen 3 endpoint first
   if (apiKey) {
-    // 1. Try Google AI Studio Imagen 3 generateImages API endpoint
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:generateImages?key=${apiKey}`;
       const response = await fetch(url, {
@@ -358,7 +358,7 @@ export async function generateImageAI(
           prompt,
           config: {
             numberOfImages: 1,
-            aspectRatio: targetRatio,
+            aspectRatio: width === height ? '1:1' : '16:9',
             outputMimeType: 'image/png',
           },
         }),
@@ -372,42 +372,10 @@ export async function generateImageAI(
         }
       }
     } catch (e) {
-      console.warn('Imagen generateImages endpoint failed, trying predict endpoint...', e);
-    }
-
-    // 2. Try Google AI Studio Imagen 3 predict API endpoint
-    const models = ['imagen-3.0-generate-002', 'imagen-3.0-fast-generate-001'];
-    for (const model of models) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            instances: [{ prompt }],
-            parameters: {
-              sampleCount: 1,
-              aspectRatio: targetRatio,
-              outputMimeType: 'image/png',
-            },
-          }),
-        });
-
-        if (response.ok) {
-          const json = await response.json();
-          const b64 = json?.predictions?.[0]?.bytesBase64Encoded;
-          if (b64) {
-            return `data:image/png;base64,${b64}`;
-          }
-        }
-      } catch (e) {
-        console.warn(`Imagen model ${model} predict failed...`, e);
-      }
+      // Clean fallback without throwing network errors
     }
   }
 
-  // Fallback to high-res Nano-banana / Flux model AI image generator
-  const seed = Math.floor(Math.random() * 1000000);
-  const encodedPrompt = encodeURIComponent(prompt);
+  // Primary high-performance AI Image Engine (Black Forest Labs Flux 1.1 / Schnell model via Pollinations API)
   return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=flux&nologo=true`;
 }
