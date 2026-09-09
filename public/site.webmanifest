@@ -1,0 +1,22 @@
+{
+  "name": "Appdev Pro Prompt | Master Engineering Prompt Generator",
+  "short_name": "Appdev Pro",
+  "description": "Production-grade Master Engineering Prompt Generator for AI Coding Agents (Antigravity, Claude, Gemini, GPT-4). Architect complete 30-section prompts with live preview & mockups.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0F17",
+  "theme_color": "#0866FF",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

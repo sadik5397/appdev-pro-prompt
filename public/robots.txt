@@ -1,0 +1,6 @@
+# Robots.txt for Appdev Pro Prompt
+User-agent: *
+Allow: /
+
+# Sitemap URL
+Sitemap: https://sadik5397.github.io/appdev-pro-prompt/sitemap.xml
