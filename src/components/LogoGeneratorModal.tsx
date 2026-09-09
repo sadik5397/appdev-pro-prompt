@@ -94,7 +94,7 @@ export const LogoGeneratorModal: React.FC<LogoGeneratorModalProps> = ({
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#05070C]/80 backdrop-blur-sm animate-fadeIn"
     >
-      <div className="relative w-full max-w-lg bg-[#111622] rounded-lg border border-[#1E2638] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden my-auto">
+      <div className="relative w-full max-w-3xl bg-[#111622] rounded-lg border border-[#1E2638] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden my-auto">
         {/* Pinned Modal Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#1E2638] bg-[#111622] flex-shrink-0">
           <div>
