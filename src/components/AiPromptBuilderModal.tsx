@@ -42,6 +42,17 @@ export const AiPromptBuilderModal: React.FC<AiPromptBuilderModalProps> = ({
     return () => clearInterval(interval);
   }, [isGenerating]);
 
+  // Close modal on Escape key if not generating
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isGenerating) onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isGenerating, onClose]);
+
   if (!isOpen) return null;
 
   const apiKey = getSavedApiKey();
@@ -76,13 +87,19 @@ export const AiPromptBuilderModal: React.FC<AiPromptBuilderModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#05070C]/80 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-xl bg-[#111622] rounded-lg border border-[#1E2638] p-6 shadow-2xl overflow-hidden">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isGenerating) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#05070C]/80 backdrop-blur-sm animate-fadeIn"
+    >
+      <div className="relative w-full max-w-xl bg-[#111622] rounded-lg border border-[#1E2638] p-6 shadow-2xl overflow-hidden my-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
           disabled={isGenerating}
           className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded hover:bg-[#161C2A] transition disabled:opacity-30"
+          title="Close (Esc)"
         >
           <X className="w-5 h-5" />
         </button>

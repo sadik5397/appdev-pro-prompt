@@ -29,6 +29,17 @@ export const ApiKeySettingsModal: React.FC<ApiKeySettingsModalProps> = ({
     }
   }, [isOpen]);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isValidating) onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isValidating, onClose]);
+
   if (!isOpen) return null;
 
   const handleSaveApiKey = async () => {
@@ -60,12 +71,19 @@ export const ApiKeySettingsModal: React.FC<ApiKeySettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#05070C]/80 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-md bg-[#111622] rounded-lg border border-[#1E2638] p-5 shadow-2xl">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isValidating) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#05070C]/80 backdrop-blur-sm animate-fadeIn"
+    >
+      <div className="relative w-full max-w-md bg-[#111622] rounded-lg border border-[#1E2638] p-5 shadow-2xl my-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded hover:bg-[#161C2A] transition"
+          disabled={isValidating}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded hover:bg-[#161C2A] transition disabled:opacity-30"
+          title="Close (Esc)"
         >
           <X className="w-5 h-5" />
         </button>
